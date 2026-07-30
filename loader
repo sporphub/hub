@@ -48,7 +48,7 @@ if currentExecutor:find("delta") then
 
 -- Scenario 2: Kick if using Xeno Executor
 elseif currentExecutor:find("xeno") then
-    LocalPlayer:Kick("\n[Security Alert]\nXeno Executor is not allowed in this game.")
+    LocalPlayer:Kick("\n[Security Alert]\nXeno Executor is not allowed for now. Join Discord for more information: https://discord.gg/weDZp9vVFh")
 
 -- Scenario 3: Allowed Executor / Default Execution
 else
