@@ -1,36 +1,37 @@
 -- ==========================================
---  EXECUTOR DETECTION & KICK SCRIPT
+--  SAFE EXECUTOR DETECTION & KICK SCRIPT
 -- ==========================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Function to identify the current executor name
+-- Safe function call helper
+local function safeCall(fn)
+    if type(fn) == "function" then
+        local success, result = pcall(fn)
+        if success and type(result) == "string" then
+            return result
+        end
+    end
+    return nil
+end
+
+-- Safely identify the current executor
 local function getExecutor()
-    -- Check custom Xeno globals (from XenoExecutor source)
-    if Xeno ~= nil or getgenv().Xeno ~= nil then
+    -- 1. Check custom Xeno globals
+    if rawget(_G, "Xeno") ~= nil or (getgenv and rawget(getgenv(), "Xeno") ~= nil) then
         return "Xeno"
     end
     
-    -- Check custom Delta globals
-    if DELTA_LOADED ~= nil or getgenv().DELTA_LOADED ~= nil then
+    -- 2. Check custom Delta globals
+    if rawget(_G, "DELTA_LOADED") ~= nil or (getgenv and rawget(getgenv(), "DELTA_LOADED") ~= nil) then
         return "Delta"
     end
 
-    -- Check via standard identifyexecutor()
-    if identifyexecutor then
-        local name = identifyexecutor()
-        if type(name) == "string" then
-            return name
-        end
-    end
-
-    -- Check via getexecutorname()
-    if getexecutorname then
-        local name = getexecutorname()
-        if type(name) == "string" then
-            return name
-        end
+    -- 3. Safely call identifyexecutor if it exists
+    local name = safeCall(identifyexecutor) or safeCall(getexecutorname)
+    if name then
+        return name
     end
 
     return "Unknown"
@@ -42,18 +43,15 @@ end
 
 local currentExecutor = getExecutor():lower()
 
--- Scenario 1: Kick if using Delta
 if currentExecutor:find("delta") then
     LocalPlayer:Kick("\n[Security Alert]\nDelta Executor is not allowed in this game.")
 
--- Scenario 2: Kick if using Xeno Executor
 elseif currentExecutor:find("xeno") then
     LocalPlayer:Kick("\n[Security Alert]\nXeno Executor is not allowed in this game.")
 
--- Scenario 3: Allowed Executor / Default Execution
 else
-    print("[+] Executor allowed or not blacklisted (" .. currentExecutor .. "). Executing main script...")
+    print("[+] Executor allowed or unrecognized (" .. currentExecutor .. "). Running main script...")
     
-    -- Place your main script here:
+    -- Your main script execution goes here:
     -- loadstring(game:HttpGet("https://raw.githubusercontent.com/.../main_script.lua"))()
 end
