@@ -1,3 +1,4 @@
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -32,6 +33,10 @@ local function getExecutor()
     return "Unknown"
 end
 
+-- ==========================================
+--  EXECUTION & KICK LOGIC
+-- ==========================================
+
 local currentExecutor = getExecutor():lower()
 
 -- Scenario 1: Kick if using Delta
@@ -41,3 +46,4 @@ elseif currentExecutor:find("xeno") then
     LocalPlayer:Kick("\n[Security Alert]\nXeno Executor is not allowed in this game.")
 else
     loadstring(game:HttpGet("https://api.jnkie.com/api/v1/luascripts/public/eb70e01a85a92c98ca0e54a9bb5a2474cef55eef9f2d0aa76aa086e6217f7453/download"))()
+end
