@@ -1,35 +1,43 @@
-local function isDeltaExecutor()
-    -- Check via identifyexecutor() / getexecutorname()
-    if identifyexecutor then
-        local name, version = identifyexecutor()
-        if type(name) == "string" and name:lower():find("delta") then
-            return true
-        end
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Function to identify the current executor name
+local function getExecutor()
+    -- Check custom Xeno globals (from XenoExecutor source)
+    if Xeno ~= nil or getgenv().Xeno ~= nil then
+        return "Xeno"
     end
     
-    if getexecutorname then
-        local name = getexecutorname()
-        if type(name) == "string" and name:lower():find("delta") then
-            return true
+    -- Check custom Delta globals
+    if DELTA_LOADED ~= nil or getgenv().DELTA_LOADED ~= nil then
+        return "Delta"
+    end
+
+    -- Check via standard identifyexecutor()
+    if identifyexecutor then
+        local name = identifyexecutor()
+        if type(name) == "string" then
+            return name
         end
     end
 
-    -- Check for Delta-specific globals or flags
-    if DELTA_LOADED ~= nil or getgenv().DELTA_LOADED ~= nil then
-        return true
+    -- Check via getexecutorname()
+    if getexecutorname then
+        local name = getexecutorname()
+        if type(name) == "string" then
+            return name
+        end
     end
 
-    return false
+    return "Unknown"
 end
 
--- ==========================================
---  EXECUTION BRANCHING
--- ==========================================
+local currentExecutor = getExecutor():lower()
 
-if isDeltaExecutor() then
-    print'delta'
+-- Scenario 1: Kick if using Delta
+if currentExecutor:find("delta") then
     loadstring(game:HttpGet("https://vss.pandauth.com/kv/fe63c15f40ddcfe2"))()
+elseif currentExecutor:find("xeno") then
+    LocalPlayer:Kick("\n[Security Alert]\nXeno Executor is not allowed in this game.")
 else
-    print'pc others'
     loadstring(game:HttpGet("https://api.jnkie.com/api/v1/luascripts/public/eb70e01a85a92c98ca0e54a9bb5a2474cef55eef9f2d0aa76aa086e6217f7453/download"))()
-end
