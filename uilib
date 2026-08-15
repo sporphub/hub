@@ -1,0 +1,561 @@
+-- Standalone Axel-style UI library for Roblox executors.
+-- Usage: local UI = loadstring(readfile("uilib.lua"))()
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local UI = {}
+UI.Theme = {
+    BG = Color3.fromRGB(17, 17, 24),
+    SIDEBAR = Color3.fromRGB(13, 13, 19),
+    HEADER = Color3.fromRGB(11, 11, 16),
+    CARD = Color3.fromRGB(22, 22, 30),
+    CARD2 = Color3.fromRGB(28, 28, 38),
+    BORDER = Color3.fromRGB(35, 35, 48),
+    ACCENT = Color3.fromRGB(212, 165, 71),
+    GREEN = Color3.fromRGB(80, 210, 130),
+    RED = Color3.fromRGB(235, 65, 75),
+    TEXT = Color3.fromRGB(240, 240, 248),
+    DIM = Color3.fromRGB(150, 150, 170),
+    MUTE = Color3.fromRGB(80, 80, 105),
+    DIVIDER = Color3.fromRGB(30, 30, 42),
+}
+
+UI.Fonts = {
+    Title = Enum.Font.Highway,
+    Bold = Enum.Font.GothamBold,
+    Regular = Enum.Font.Gotham,
+    Medium = Enum.Font.GothamMedium,
+    Code = Enum.Font.Code,
+}
+
+local function corner(parent, radius)
+    local value = Instance.new("UICorner")
+    value.CornerRadius = UDim.new(0, radius or 6)
+    value.Parent = parent
+    return value
+end
+
+local function padding(parent, top, bottom, left, right)
+    local value = Instance.new("UIPadding")
+    value.PaddingTop = UDim.new(0, top or 0)
+    value.PaddingBottom = UDim.new(0, bottom or 0)
+    value.PaddingLeft = UDim.new(0, left or 0)
+    value.PaddingRight = UDim.new(0, right or 0)
+    value.Parent = parent
+    return value
+end
+
+local function tween(object, properties, duration)
+    TweenService:Create(object, TweenInfo.new(duration or 0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties):Play()
+end
+
+local function newLabel(parent, text, size, position, font, color, textSize, zIndex)
+    local label = Instance.new("TextLabel")
+    label.Size = size
+    label.Position = position or UDim2.new()
+    label.BackgroundTransparency = 1
+    label.Text = text or ""
+    label.TextColor3 = color or UI.Theme.TEXT
+    label.TextSize = textSize or 12
+    label.Font = font or UI.Fonts.Regular
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.ZIndex = zIndex or 5
+    label.Parent = parent
+    return label
+end
+
+local function addDrag(handle, target)
+    local dragging, startInput, startPosition = false, nil, nil
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            startInput = input.Position
+            startPosition = target.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startInput
+            target.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+local function makeRow(parent, height, order)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, height)
+    row.BackgroundColor3 = UI.Theme.CARD
+    row.BorderSizePixel = 0
+    row.LayoutOrder = order or 0
+    row.ZIndex = 4
+    row.Parent = parent
+    corner(row, 10)
+    return row
+end
+
+local function addRowText(row, title, subtitle, rightSpace)
+    local titleY = subtitle and 8 or math.floor(row.Size.Y.Offset / 2 - 8)
+    local label = newLabel(row, title, UDim2.new(1, -(rightSpace or 64), 0, 16), UDim2.new(0, 14, 0, titleY), UI.Fonts.Medium, UI.Theme.TEXT, 13)
+    if subtitle then
+        newLabel(row, subtitle, UDim2.new(1, -(rightSpace or 64), 0, 12), UDim2.new(0, 14, 0, titleY + 20), UI.Fonts.Regular, UI.Theme.MUTE, 10)
+    end
+    return label
+end
+
+function UI:CreateWindow(options)
+    options = options or {}
+    local title = options.Title or "Axel Hub"
+    local subtitle = options.Subtitle or "by Developer"
+    local size = options.Size or UDim2.new(0, 440, 0, 360)
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local previous = playerGui:FindFirstChild(options.Name or "AxelUI")
+    if previous then previous:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = options.Name or "AxelUI"
+    gui.ResetOnSpawn = false
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    gui.DisplayOrder = options.DisplayOrder or 999
+    gui.Parent = playerGui
+
+    local main = Instance.new("Frame")
+    main.Name = "Main"
+    main.Size = size
+    main.Position = options.Position or UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2)
+    main.BackgroundColor3 = UI.Theme.BG
+    main.BorderSizePixel = 0
+    main.ClipsDescendants = true
+    main.Active = true
+    main.Parent = gui
+    corner(main, 10)
+
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 36)
+    header.BackgroundColor3 = UI.Theme.HEADER
+    header.BorderSizePixel = 0
+    header.ZIndex = 10
+    header.Parent = main
+    corner(header, 10)
+    addDrag(header, main)
+
+    local mark = Instance.new("Frame")
+    mark.Size = UDim2.new(0, 24, 0, 24)
+    mark.Position = UDim2.new(0, 10, 0.5, -12)
+    mark.BackgroundColor3 = UI.Theme.ACCENT
+    mark.BorderSizePixel = 0
+    mark.ZIndex = 12
+    mark.Parent = header
+    corner(mark, 6)
+    local initial = newLabel(mark, options.Icon or string.sub(title, 1, 1):upper(), UDim2.new(1, 0, 1, 0), nil, UI.Fonts.Title, UI.Theme.BG, 13, 13)
+    initial.TextXAlignment = Enum.TextXAlignment.Center
+
+    newLabel(header, title, UDim2.new(1, -190, 0, 14), UDim2.new(0, 40, 0, 5), UI.Fonts.Title, UI.Theme.TEXT, 12, 12)
+    newLabel(header, subtitle, UDim2.new(1, -190, 0, 11), UDim2.new(0, 40, 0, 20), UI.Fonts.Regular, UI.Theme.MUTE, 9, 12)
+
+    local close = Instance.new("TextButton")
+    close.Size = UDim2.new(0, 24, 0, 24)
+    close.Position = UDim2.new(1, -32, 0.5, -12)
+    close.BackgroundColor3 = UI.Theme.RED
+    close.BackgroundTransparency = 0.7
+    close.BorderSizePixel = 0
+    close.Text = "x"
+    close.TextColor3 = UI.Theme.RED
+    close.TextSize = 16
+    close.Font = UI.Fonts.Bold
+    close.ZIndex = 13
+    close.Parent = header
+    corner(close, 12)
+
+    local minimized = false
+    local pill = Instance.new("TextButton")
+    pill.Size = UDim2.new(0, 160, 0, 36)
+    pill.BackgroundColor3 = UI.Theme.HEADER
+    pill.BorderSizePixel = 0
+    pill.Text = ""
+    pill.Visible = false
+    pill.ZIndex = 100
+    pill.Parent = gui
+    corner(pill, 10)
+    local pillMark = Instance.new("Frame")
+    pillMark.Size = UDim2.new(0, 24, 0, 24)
+    pillMark.Position = UDim2.new(0, 10, 0.5, -12)
+    pillMark.BackgroundColor3 = UI.Theme.ACCENT
+    pillMark.BorderSizePixel = 0
+    pillMark.ZIndex = 101
+    pillMark.Parent = pill
+    corner(pillMark, 6)
+    local pillInitial = newLabel(pillMark, initial.Text, UDim2.new(1, 0, 1, 0), nil, UI.Fonts.Title, UI.Theme.BG, 13, 102)
+    pillInitial.TextXAlignment = Enum.TextXAlignment.Center
+    newLabel(pill, title, UDim2.new(1, -44, 0, 14), UDim2.new(0, 40, 0, 5), UI.Fonts.Title, UI.Theme.TEXT, 12, 101)
+    newLabel(pill, subtitle, UDim2.new(1, -44, 0, 11), UDim2.new(0, 40, 0, 20), UI.Fonts.Regular, UI.Theme.MUTE, 9, 101)
+    addDrag(pill, pill)
+
+    local minimize = Instance.new("TextButton")
+    minimize.Size = UDim2.new(0, 24, 0, 24)
+    minimize.Position = UDim2.new(1, -62, 0.5, -12)
+    minimize.BackgroundColor3 = UI.Theme.BORDER
+    minimize.BackgroundTransparency = 0.4
+    minimize.BorderSizePixel = 0
+    minimize.Text = "-"
+    minimize.TextColor3 = UI.Theme.DIM
+    minimize.TextSize = 16
+    minimize.Font = UI.Fonts.Bold
+    minimize.ZIndex = 13
+    minimize.Parent = header
+    corner(minimize, 12)
+
+    local function restore()
+        minimized = false
+        main.Visible = true
+        pill.Visible = false
+    end
+    minimize.Activated:Connect(function()
+        minimized = true
+        pill.Position = main.Position
+        main.Visible = false
+        pill.Visible = true
+    end)
+    pill.Activated:Connect(function()
+        if minimized then restore() end
+    end)
+
+    local sidebar = Instance.new("Frame")
+    sidebar.Size = UDim2.new(0, 130, 1, -36)
+    sidebar.Position = UDim2.new(0, 0, 0, 36)
+    sidebar.BackgroundColor3 = UI.Theme.SIDEBAR
+    sidebar.BorderSizePixel = 0
+    sidebar.ZIndex = 3
+    sidebar.Parent = main
+    corner(sidebar, 10)
+    local separator = Instance.new("Frame")
+    separator.Size = UDim2.new(0, 1, 1, 0)
+    separator.Position = UDim2.new(1, -1, 0, 0)
+    separator.BackgroundColor3 = UI.Theme.BORDER
+    separator.BorderSizePixel = 0
+    separator.ZIndex = 4
+    separator.Parent = sidebar
+
+    local content = Instance.new("Frame")
+    content.Size = UDim2.new(1, -140, 1, -42)
+    content.Position = UDim2.new(0, 134, 0, 40)
+    content.BackgroundTransparency = 1
+    content.ClipsDescendants = true
+    content.ZIndex = 3
+    content.Parent = main
+
+    local window = {Gui = gui, Main = main, Pages = {}, _buttons = {}, _active = nil}
+    function window:Destroy() gui:Destroy() end
+    function window:SetVisible(value) gui.Enabled = value end
+    close.Activated:Connect(function() window:Destroy() end)
+
+    function window:SelectPage(name)
+        for pageName, page in pairs(self.Pages) do page.Frame.Visible = pageName == name end
+        for pageName, button in pairs(self._buttons) do
+            local selected = pageName == name
+            button.Label.TextColor3 = selected and UI.Theme.ACCENT or UI.Theme.DIM
+            button.Icon.TextColor3 = selected and UI.Theme.ACCENT or UI.Theme.DIM
+            button.Highlight.Visible = selected
+        end
+        self._active = name
+    end
+
+    function window:AddPage(pageOptions)
+        pageOptions = pageOptions or {}
+        local name = pageOptions.Name or "Page"
+        local index = #self._buttons + 1
+        local page = Instance.new("ScrollingFrame")
+        page.Name = name
+        page.Size = UDim2.new(1, 0, 1, 0)
+        page.BackgroundTransparency = 1
+        page.BorderSizePixel = 0
+        page.ScrollBarThickness = 2
+        page.ScrollBarImageColor3 = UI.Theme.ACCENT
+        page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        page.CanvasSize = UDim2.new()
+        page.Visible = false
+        page.ZIndex = 3
+        page.Parent = content
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 5)
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Parent = page
+        padding(page, 5, 10, 5, 5)
+
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, -12, 0, 26)
+        button.Position = UDim2.new(0, 6, 0, 32 + (index - 1) * 30)
+        button.BackgroundTransparency = 1
+        button.BorderSizePixel = 0
+        button.Text = ""
+        button.ZIndex = 5
+        button.Parent = sidebar
+        local highlight = Instance.new("Frame")
+        highlight.Size = UDim2.new(1, 0, 1, 0)
+        highlight.BackgroundColor3 = UI.Theme.CARD
+        highlight.BackgroundTransparency = 0.3
+        highlight.BorderSizePixel = 0
+        highlight.Visible = false
+        highlight.ZIndex = 4
+        highlight.Parent = button
+        corner(highlight, 5)
+        local icon = newLabel(button, pageOptions.Icon or "*", UDim2.new(0, 20, 0, 16), UDim2.new(0, 6, 0.5, -8), UI.Fonts.Regular, UI.Theme.DIM, 12, 6)
+        icon.TextXAlignment = Enum.TextXAlignment.Center
+        local label = newLabel(button, name, UDim2.new(1, -32, 1, 0), UDim2.new(0, 28, 0, 0), UI.Fonts.Bold, UI.Theme.DIM, 11, 6)
+        button.Activated:Connect(function() self:SelectPage(name) end)
+        self._buttons[name] = {Highlight = highlight, Icon = icon, Label = label}
+
+        local api = {Frame = page}
+        function api:Title(text, subtitle, order)
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, 0, 0, subtitle and 38 or 24)
+            frame.BackgroundTransparency = 1
+            frame.LayoutOrder = order or 0
+            frame.Parent = page
+            newLabel(frame, text, UDim2.new(1, 0, 0, 20), nil, UI.Fonts.Title, UI.Theme.TEXT, 16, 4)
+            if subtitle then newLabel(frame, subtitle, UDim2.new(1, 0, 0, 14), UDim2.new(0, 0, 0, 22), UI.Fonts.Regular, UI.Theme.MUTE, 10, 4) end
+            return frame
+        end
+        function api:Section(text, order)
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, 0, 0, 28)
+            frame.BackgroundTransparency = 1
+            frame.LayoutOrder = order or 0
+            frame.Parent = page
+            newLabel(frame, text, UDim2.new(1, -16, 1, 0), UDim2.new(0, 12, 0, 0), UI.Fonts.Bold, UI.Theme.MUTE, 10, 4)
+            return frame
+        end
+        function api:Toggle(options)
+            local row = makeRow(page, 50, options.Order)
+            local label = addRowText(row, options.Name or "Toggle", options.Description, 64)
+            local state = options.Default == true
+            local box = Instance.new("Frame")
+            box.Size = UDim2.new(0, 28, 0, 28)
+            box.Position = UDim2.new(1, -42, 0.5, -14)
+            box.BackgroundColor3 = UI.Theme.BORDER
+            box.BorderSizePixel = 0
+            box.ZIndex = 5
+            box.Parent = row
+            corner(box, 14)
+            local stroke = Instance.new("UIStroke")
+            stroke.Thickness = 2
+            stroke.Parent = box
+            local check = newLabel(box, "", UDim2.new(1, 0, 1, 0), nil, UI.Fonts.Title, UI.Theme.ACCENT, 14, 6)
+            check.TextXAlignment = Enum.TextXAlignment.Center
+            local function render()
+                check.Text = state and "v" or ""
+                tween(stroke, {Color = state and UI.Theme.ACCENT or Color3.fromRGB(60, 60, 75)})
+            end
+            render()
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(1, 0, 1, 0)
+            button.BackgroundTransparency = 1
+            button.Text = ""
+            button.ZIndex = 7
+            button.Parent = row
+            local control = {Label = label}
+            function control:Get() return state end
+            function control:Set(value, silent) state = value == true; render(); if not silent and options.Callback then options.Callback(state) end end
+            button.Activated:Connect(function() control:Set(not state) end)
+            return control
+        end
+        function api:Button(options)
+            local row = makeRow(page, 42, options.Order)
+            row.BackgroundColor3 = options.Color or UI.Theme.ACCENT
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(1, 0, 1, 0)
+            button.BackgroundTransparency = 1
+            button.Text = options.Name or "Button"
+            button.TextColor3 = Color3.new(1, 1, 1)
+            button.TextSize = 13
+            button.Font = UI.Fonts.Title
+            button.ZIndex = 5
+            button.Parent = row
+            if options.Callback then button.Activated:Connect(options.Callback) end
+            return button
+        end
+        function api:Label(options)
+            local row = makeRow(page, 42, options.Order)
+            local label = addRowText(row, options.Name or "Label", options.Description, 14)
+            return {Set = function(_, value) label.Text = value end, Get = function() return label.Text end, Label = label}
+        end
+        function api:Textbox(options)
+            local row = makeRow(page, 50, options.Order)
+            local label = addRowText(row, options.Name or "Textbox", options.Description, 130)
+            local background = Instance.new("Frame")
+            background.Size = UDim2.new(0, 110, 0, 28)
+            background.Position = UDim2.new(1, -124, 0.5, -14)
+            background.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+            background.BorderSizePixel = 0
+            background.ZIndex = 5
+            background.Parent = row
+            corner(background, 6)
+            local input = Instance.new("TextBox")
+            input.Size = UDim2.new(1, -12, 1, 0)
+            input.Position = UDim2.new(0, 6, 0, 0)
+            input.BackgroundTransparency = 1
+            input.Text = tostring(options.Default or "")
+            input.PlaceholderText = options.Placeholder or ""
+            input.TextColor3 = UI.Theme.ACCENT
+            input.PlaceholderColor3 = UI.Theme.MUTE
+            input.TextSize = 12
+            input.Font = UI.Fonts.Code
+            input.TextXAlignment = Enum.TextXAlignment.Right
+            input.ZIndex = 6
+            input.Parent = background
+            input.FocusLost:Connect(function() if options.Callback then options.Callback(input.Text) end end)
+            return {Get = function() return input.Text end, Set = function(_, value, silent) input.Text = tostring(value); if not silent and options.Callback then options.Callback(input.Text) end end, Label = label, Input = input}
+        end
+        function api:Dropdown(options)
+            local values = options.Values or {}
+            local selected = options.Default or values[1]
+            local row = makeRow(page, 50, options.Order)
+            local label = addRowText(row, options.Name or "Dropdown", options.Description, 130)
+            local field = Instance.new("TextButton")
+            field.Size = UDim2.new(0, 116, 0, 32)
+            field.Position = UDim2.new(1, -128, 0.5, -16)
+            field.BackgroundColor3 = UI.Theme.CARD2
+            field.BorderSizePixel = 0
+            field.Text = ""
+            field.ZIndex = 6
+            field.Parent = row
+            corner(field, 8)
+            local valueLabel = newLabel(field, tostring(selected or ""), UDim2.new(1, -26, 1, 0), UDim2.new(0, 10, 0, 0), UI.Fonts.Bold, UI.Theme.TEXT, 11, 7)
+            local arrow = newLabel(field, "v", UDim2.new(0, 18, 1, 0), UDim2.new(1, -22, 0, 0), UI.Fonts.Regular, UI.Theme.ACCENT, 10, 7)
+            arrow.TextXAlignment = Enum.TextXAlignment.Center
+            local menu
+            local control = {Label = label}
+            local function close()
+                if menu then menu:Destroy(); menu = nil end
+                arrow.Text = "v"
+            end
+            local function selectValue(value, silent)
+                selected = value
+                valueLabel.Text = tostring(value)
+                close()
+                if not silent and options.Callback then options.Callback(value) end
+            end
+            function control:Get() return selected end
+            function control:Set(value, silent)
+                for _, candidate in ipairs(values) do if candidate == value then selectValue(value, silent); return true end end
+                return false
+            end
+            field.Activated:Connect(function()
+                if menu then close(); return end
+                arrow.Text = "^"
+                menu = Instance.new("ScrollingFrame")
+                menu.Name = "DropdownMenu"
+                menu.Size = UDim2.new(0, 116, 0, math.min(#values * 34 + 8, 160))
+                menu.Position = UDim2.new(1, -128, 0, 54)
+                menu.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+                menu.BorderSizePixel = 0
+                menu.ScrollBarThickness = 2
+                menu.ScrollBarImageColor3 = UI.Theme.ACCENT
+                menu.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                menu.CanvasSize = UDim2.new()
+                menu.ZIndex = 50
+                menu.Parent = row
+                corner(menu, 8)
+                local list = Instance.new("UIListLayout")
+                list.Padding = UDim.new(0, 2)
+                list.Parent = menu
+                padding(menu, 4, 4, 4, 4)
+                for i, value in ipairs(values) do
+                    local item = Instance.new("TextButton")
+                    item.Size = UDim2.new(1, 0, 0, 30)
+                    item.BackgroundColor3 = value == selected and UI.Theme.ACCENT or UI.Theme.CARD2
+                    item.BackgroundTransparency = value == selected and 0.8 or 0
+                    item.BorderSizePixel = 0
+                    item.Text = tostring(value)
+                    item.TextColor3 = value == selected and UI.Theme.ACCENT or UI.Theme.DIM
+                    item.TextSize = 11
+                    item.Font = UI.Fonts.Medium
+                    item.LayoutOrder = i
+                    item.ZIndex = 51
+                    item.Parent = menu
+                    corner(item, 6)
+                    item.Activated:Connect(function() selectValue(value) end)
+                end
+            end)
+            return control
+        end
+        function api:Slider(options)
+            local minimum = options.Min or 0
+            local maximum = options.Max or 100
+            local value = math.clamp(options.Default or minimum, minimum, maximum)
+            local row = makeRow(page, 60, options.Order)
+            local label = addRowText(row, options.Name or "Slider", options.Description, 120)
+            local display = newLabel(row, tostring(value) .. (options.Suffix or ""), UDim2.new(0, 110, 0, 24), UDim2.new(1, -124, 0, 3), UI.Fonts.Code, UI.Theme.ACCENT, 12, 6)
+            display.TextXAlignment = Enum.TextXAlignment.Right
+            local track = Instance.new("Frame")
+            track.Size = UDim2.new(1, -28, 0, 4)
+            track.Position = UDim2.new(0, 14, 0, 44)
+            track.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+            track.BorderSizePixel = 0
+            track.ZIndex = 5
+            track.Parent = row
+            corner(track, 2)
+            local fill = Instance.new("Frame")
+            fill.Size = UDim2.new()
+            fill.BackgroundColor3 = UI.Theme.ACCENT
+            fill.BorderSizePixel = 0
+            fill.ZIndex = 6
+            fill.Parent = track
+            corner(fill, 2)
+            local knob = Instance.new("Frame")
+            knob.Size = UDim2.new(0, 14, 0, 14)
+            knob.BackgroundColor3 = UI.Theme.ACCENT
+            knob.BorderSizePixel = 0
+            knob.ZIndex = 7
+            knob.Parent = track
+            corner(knob, 7)
+            local control = {Label = label}
+            local function render()
+                local ratio = (value - minimum) / (maximum - minimum)
+                fill.Size = UDim2.new(ratio, 0, 1, 0)
+                knob.Position = UDim2.new(ratio, -7, 0.5, -7)
+                display.Text = tostring(value) .. (options.Suffix or "")
+            end
+            local function setFromX(x, silent)
+                local ratio = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                control:Set(math.floor(minimum + ratio * (maximum - minimum) + 0.5), silent)
+            end
+            function control:Get() return value end
+            function control:Set(nextValue, silent)
+                value = math.clamp(tonumber(nextValue) or minimum, minimum, maximum)
+                render()
+                if not silent and options.Callback then options.Callback(value) end
+            end
+            local dragging = false
+            track.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; setFromX(input.Position.X) end
+            end)
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then setFromX(input.Position.X) end
+            end)
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+            end)
+            render()
+            return control
+        end
+
+        self.Pages[name] = api
+        if not self._active then self:SelectPage(name) end
+        return api
+    end
+    return window
+end
+
+UI.corner = corner
+UI.padding = padding
+return UI
