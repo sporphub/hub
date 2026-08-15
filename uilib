@@ -255,22 +255,29 @@ function UI:CreateWindow(options)
 
     local resizeGrip = Instance.new("TextButton")
     resizeGrip.Name = "ResizeGrip"
-    resizeGrip.Size = UDim2.new(0, 28, 0, 28)
-    resizeGrip.Position = UDim2.new(1, -28, 1, -28)
-    resizeGrip.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    resizeGrip.BackgroundTransparency = 0.4
+    resizeGrip.Size = UDim2.new(0, 38, 0, 38)
+    resizeGrip.AnchorPoint = Vector2.new(1, 1)
+    resizeGrip.Position = UDim2.new(1, -6, 1, -6)
+    resizeGrip.BackgroundColor3 = UI.Theme.ACCENT
+    resizeGrip.BackgroundTransparency = 0.1
     resizeGrip.BorderSizePixel = 0
     resizeGrip.Text = ""
     resizeGrip.AutoButtonColor = false
     resizeGrip.Active = true
     resizeGrip.ZIndex = 60
     resizeGrip.Parent = main
-    corner(resizeGrip, 8)
+    corner(resizeGrip, 10)
+    local gripStroke = Instance.new("UIStroke")
+    gripStroke.Color = Color3.fromRGB(255, 220, 135)
+    gripStroke.Thickness = 1
+    gripStroke.Parent = resizeGrip
+    local gripLabel = newLabel(resizeGrip, "+", UDim2.new(0, 14, 0, 14), UDim2.new(0, 5, 0, 2), UI.Fonts.Bold, UI.Theme.BG, 14, 62)
+    gripLabel.TextXAlignment = Enum.TextXAlignment.Center
     for index = 0, 2 do
         local line = Instance.new("Frame")
-        line.Size = UDim2.new(0, 14, 0, 2)
-        line.Position = UDim2.new(1, -(22 - index * 5), 1, -(9 + index * 5))
-        line.BackgroundColor3 = UI.Theme.TEXT
+        line.Size = UDim2.new(0, 16, 0, 2)
+        line.Position = UDim2.new(1, -(21 - index * 5), 1, -(8 + index * 5))
+        line.BackgroundColor3 = UI.Theme.BG
         line.BorderSizePixel = 0
         line.Rotation = -45
         line.ZIndex = 61
