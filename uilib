@@ -611,4 +611,5 @@ end
 
 UI.corner = corner
 UI.padding = padding
+if getgenv then getgenv().uilib = UI end
 return UI
