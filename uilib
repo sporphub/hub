@@ -21913,7 +21913,9 @@ Parent = b,
 })
 Icon.setColor(self._restoreIcon, self.Theme:Get("Text"))
 else
+if not self._restoreTitle then
 b.Text = tostring((custom and options.Text) or self._showText)
+end
 end
 local c = self._restoreCorner or b:FindFirstChildOfClass("UICorner")
 if c then
@@ -21949,7 +21951,7 @@ end
 function WindowChrome:SetShowText(text)
 self._showTextExplicit = text ~= nil
 self._showText = tostring(text or "Show VaultUI")
-if self._restoreButton and not self._restoreIcon then
+if self._restoreButton and not self._restoreIcon and not self._restoreTitle then
 self._restoreButton.Text = self._showText
 end
 return self
