@@ -4672,6 +4672,8 @@ local WINDOW_OPTIONS = {
 "CornerRadius",
 "FooterHeight",
 "FooterText",
+"VersionText",
+"DiscordUrl",
 "Opacity",
 "BackgroundImage",
 "BackgroundImageTransparency",
@@ -17896,37 +17898,6 @@ Description = "@settings.appearanceDesc",
 Icon = "palette",
 Span = "Auto",
 })
-self._themeControl = appearance:AddDropdown({
-Id = "__settings.theme",
-Title = "@settings.theme",
-Icon = "swatch-book",
-Options = w.Theme:List(),
-Default = w.Theme:Current(),
-IgnoreConfig = true,
-FormatDisplayValue = function(value)
-local polarity = w.Theme:Polarity(value)
-if not polarity or value == polarity then
-return value
-end
-return `{value} Â· {polarity}`
-end,
-Callback = function(v)
-w:SetTheme(v)
-end,
-})
-self._accentControl = appearance:AddColorPicker({
-Id = "__settings.accent",
-Title = "@settings.accent",
-Icon = "pipette",
-Default = w.Theme:Get("Accent"),
-IgnoreConfig = true,
-Callback = function(v)
-local c = type(v) == "table" and v.Color or v
-if typeof(c) == "Color3" then
-w:SetAccent(c)
-end
-end,
-})
 self._scaleControl = appearance:AddSlider({
 Id = "__settings.scale",
 Title = "@settings.scale",
@@ -18049,133 +18020,6 @@ return State:Get("__settings.sounds") ~= false
 end,
 Callback = function(v)
 w:SetSoundVolume(v / 100)
-end,
-})
-local editor = tab:AddSection({
-Id = "__settings.themeEditor",
-Title = "@settings.themeEditor",
-Description = "@settings.themeEditorDesc",
-Icon = "paintbrush",
-Collapsible = true,
-Collapsed = true,
-Span = "Auto",
-})
-for _, token in THEME_COLOR_TOKENS do
-local name = token
-self._tokenControls[name] = editor:AddColorPicker({
-Id = "__settings.token." .. name,
-Title = name,
-Default = w.Theme:Get(name),
-IgnoreConfig = true,
-Callback = function(v)
-local c = type(v) == "table" and v.Color or v
-if typeof(c) == "Color3" then
-w.Theme:SetToken(name, c)
-end
-end,
-})
-end
-self._scrimTransparencyControl = editor:AddSlider({
-Id = "__settings.token.ScrimTransparency",
-Title = "Scrim transparency",
-Description = "Opacity of the backdrop behind dialogs and sheets",
-Min = 0,
-Max = 100,
-Step = 1,
-Default = math.floor(w.Theme:Get("ScrimTransparency") * 100 + 0.5),
-Suffix = "%",
-IgnoreConfig = true,
-Callback = function(value)
-w.Theme:SetToken("ScrimTransparency", value / 100)
-end,
-})
-editor:AddButton({
-Title = "@settings.theme.reset",
-Icon = "rotate-ccw",
-Text = "@settings.reset",
-Callback = function()
-w.Theme:ResetOverrides()
-w:SetAccent(nil)
-w.Notify:Push({ Title = w.Locale:T("settings.resetDone"), Variant = "Success" })
-end,
-})
-editor:AddButton({
-Title = "@settings.theme.export",
-Icon = "upload",
-Text = "@settings.export",
-Callback = function()
-w:ExportTheme(true)
-w.Notify:Push({ Title = w.Locale:T("settings.copied"), Variant = "Success" })
-end,
-})
-editor:AddButton({
-Title = "@settings.theme.import",
-Icon = "download",
-Text = "@settings.import",
-Callback = function()
-task.spawn(function()
-local raw =
-w.Dialog:Prompt({ Title = w.Locale:T("settings.theme.import"), Placeholder = "{...}" }):Await()
-if raw then
-local ok, err = w:ImportTheme(raw)
-if not ok then
-w.Notify:Push({ Title = tostring(err), Variant = "Error" })
-end
-end
-end)
-end,
-})
-editor:AddButton({
-Title = "Save custom theme",
-Icon = "save",
-Text = "Save asâ€¦",
-Callback = function()
-task.spawn(function()
-local name = w.Dialog
-:Prompt({
-Title = "Save custom theme",
-Content = "Use letters, numbers, dots, dashes or underscores.",
-Placeholder = "MyTheme",
-})
-:Await()
-if name and name ~= "" then
-local ok, err = w:SaveCustomTheme(name)
-w.Notify:Push({
-Title = if ok then `Saved theme {name}` else "Theme was not saved",
-Content = if ok then "It is now available in the theme list." else tostring(err),
-Variant = if ok then "Success" else "Error",
-})
-end
-end)
-end,
-})
-editor:AddButton({
-Title = "Use current theme by default",
-Icon = "pin",
-Text = "Set default",
-Callback = function()
-local ok, err = w:SetDefaultTheme(w.Theme:Current())
-w.Notify:Push({
-Title = if ok then "Default theme updated" else "Default was not changed",
-Content = if ok then w.Theme:Current() else tostring(err),
-Variant = if ok then "Success" else "Error",
-})
-end,
-})
-editor:AddButton({
-Title = "Delete current custom theme",
-Icon = "trash-2",
-Text = "Delete",
-Variant = "Danger",
-Confirm = "Delete the selected custom theme? Built-in Dark and Light cannot be deleted.",
-Callback = function()
-local name = w.Theme:Current()
-local ok, err = w:DeleteCustomTheme(name)
-w.Notify:Push({
-Title = if ok then `Deleted theme {name}` else "Theme was not deleted",
-Content = if ok then "Dark is active now." else tostring(err),
-Variant = if ok then "Success" else "Error",
-})
 end,
 })
 local windowSec = tab:AddSection({
@@ -20979,6 +20823,8 @@ _mobileButtonsSide = options.MobileButtonsSide or "Center",
 _cornerRadius = options.CornerRadius or context.Tokens:Get("CornerLg"),
 _footerHeight = math.max(26, math.floor(tonumber(options.FooterHeight) or 28)),
 _footerTextValue = options.FooterText,
+_versionText = options.VersionText,
+_discordUrl = options.DiscordUrl,
 _windowOpacity = math.clamp(tonumber(options.Opacity) or 1, 0.25, 1),
 _tabTransition = options.TabTransition or {
 Style = "Slide",
@@ -21352,6 +21198,7 @@ local Create = __require("runtime/Create")
 local Icon = __require("primitives/Icon")
 local New = Create.New
 local WindowChrome = {}
+local Env = __require("runtime/Env")
 local FADE_TIME = 0.12
 local function addToolbarStroke(window, button)
 local stroke = New("UIStroke", { Thickness = 1, Transparency = 0.72, Parent = button })
@@ -21454,7 +21301,7 @@ self:_bind(self._brandGlyph, { TextColor3 = "Accent" })
 end
 self._titleLabel = New("TextLabel", {
 Name = "Title",
-Size = UDim2.new(1, -176, 0, 18),
+Size = UDim2.new(1, -262, 0, 18),
 Position = UDim2.new(0, 52, 0, 9),
 BackgroundTransparency = 1,
 Font = self.Fonts.Bold,
@@ -21467,7 +21314,7 @@ Parent = self._header,
 self:_bind(self._titleLabel, { TextColor3 = "Text" })
 self._subtitleLabel = New("TextLabel", {
 Name = "Subtitle",
-Size = UDim2.new(1, -176, 0, 14),
+Size = UDim2.new(1, -262, 0, 14),
 Position = UDim2.new(0, 52, 0, 29),
 BackgroundTransparency = 1,
 Font = self.Fonts.Regular,
@@ -21494,43 +21341,10 @@ Enum.FillDirection.Horizontal,
 { HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center }
 )
 topbarLayout.Parent = self._topbarExtras
-self._sidebarButton = New("TextButton", {
-Name = "SidebarToggle",
-Size = UDim2.fromOffset(30, 30),
-Position = UDim2.new(1, -152, 0.5, 0),
-AnchorPoint = Vector2.new(1, 0.5),
-BackgroundTransparency = 0.82,
-AutoButtonColor = false,
-Text = "",
-Parent = self._header,
-})
-New("UICorner", { CornerRadius = UDim.new(0, tokens:Get("CornerSm")), Parent = self._sidebarButton })
-addToolbarStroke(self, self._sidebarButton)
-self:_bind(self._sidebarButton, { BackgroundColor3 = "ControlHover" })
-local sidebarIcon = Icon.new(self, "menu", {
-Size = UDim2.fromOffset(16, 16),
-Position = UDim2.fromScale(0.5, 0.5),
-AnchorPoint = Vector2.new(0.5, 0.5),
-Parent = self._sidebarButton,
-})
-Icon.setColor(sidebarIcon, self.Theme:Get("TextSecondary"))
-self._janitor:Add(self._sidebarButton.MouseEnter:Connect(function()
-self._sidebarButton.BackgroundTransparency = 0.48
-end))
-self._janitor:Add(self._sidebarButton.MouseLeave:Connect(function()
-self._sidebarButton.BackgroundTransparency = 0.82
-end))
-self._janitor:Add(self._sidebarButton.MouseButton1Click:Connect(function()
-if self._layout == "Drawer" then
-self:OpenDrawer()
-else
-self:ToggleSidebar()
-end
-end))
 self._searchButton = New("TextButton", {
 Name = "Search",
 Size = UDim2.fromOffset(30, 30),
-Position = UDim2.new(1, -116, 0.5, 0),
+Position = UDim2.new(1, -222, 0.5, 0),
 AnchorPoint = Vector2.new(1, 0.5),
 BackgroundTransparency = 0.82,
 AutoButtonColor = false,
@@ -21553,31 +21367,48 @@ if self.OpenSearch then
 self:OpenSearch()
 end
 end))
-self._themeButton = New("TextButton", {
-Name = "Theme",
-Size = UDim2.fromOffset(30, 30),
+self._versionLabel = New("TextLabel", {
+Name = "Version",
+Size = UDim2.fromOffset(56, 30),
+Position = UDim2.new(1, -216, 0.5, 0),
+AnchorPoint = Vector2.new(1, 0.5),
+BackgroundTransparency = 1,
+Font = self.Fonts.Medium,
+TextSize = tokens:Get("FontSmall"),
+TextXAlignment = Enum.TextXAlignment.Right,
+TextTruncate = Enum.TextTruncate.AtEnd,
+Text = self._versionText or "",
+Visible = self._versionText ~= nil,
+Parent = self._header,
+})
+self:_bind(self._versionLabel, { TextColor3 = "TextTertiary" })
+self._discordButton = New("TextButton", {
+Name = "Discord",
+Size = UDim2.fromOffset(76, 30),
 Position = UDim2.new(1, -80, 0.5, 0),
 AnchorPoint = Vector2.new(1, 0.5),
 BackgroundTransparency = 0.82,
 AutoButtonColor = false,
-Text = "",
+Text = "Discord",
+Font = self.Fonts.Medium,
+TextSize = tokens:Get("FontSmall"),
+Visible = self._discordUrl ~= nil,
 Parent = self._header,
 })
-New("UICorner", { CornerRadius = UDim.new(0, tokens:Get("CornerSm")), Parent = self._themeButton })
-addToolbarStroke(self, self._themeButton)
-self:_bind(self._themeButton, { BackgroundColor3 = "ControlHover" })
-drawThemeIcon(self, self._themeButton)
-self._janitor:Add(self._themeButton.MouseEnter:Connect(function()
-self._themeButton.BackgroundTransparency = 0.48
+New("UICorner", { CornerRadius = UDim.new(0, tokens:Get("CornerSm")), Parent = self._discordButton })
+addToolbarStroke(self, self._discordButton)
+self:_bind(self._discordButton, { BackgroundColor3 = "ControlHover", TextColor3 = "TextSecondary" })
+self._janitor:Add(self._discordButton.MouseEnter:Connect(function()
+self._discordButton.BackgroundTransparency = 0.48
 end))
-self._janitor:Add(self._themeButton.MouseLeave:Connect(function()
-self._themeButton.BackgroundTransparency = 0.82
+self._janitor:Add(self._discordButton.MouseLeave:Connect(function()
+self._discordButton.BackgroundTransparency = 0.82
 end))
-self._janitor:Add(self._themeButton.MouseButton1Click:Connect(function()
-if self.SetTheme then
-local target = self.Theme:Counterpart()
-if target and target ~= self.Theme:Current() then
-self:SetTheme(target)
+self._janitor:Add(self._discordButton.MouseButton1Click:Connect(function()
+if self._discordUrl then
+Env.SetClipboard(self._discordUrl)
+if self.Notify then
+self.Notify:Push({ Title = "Discord", Content = "Invite copied to clipboard", Variant = "Success", Duration = 2 })
 end
 end
 end))
@@ -22418,7 +22249,6 @@ self:CloseDrawer()
 local drawerMode = layout == "Drawer"
 local railMode = layout == "Rail"
 self._navToggle.Visible = drawerMode
-self._sidebarButton.Visible = true
 self._grip.Visible = not drawerMode and not self._locked
 if self._footer then
 self._footer.Visible = not drawerMode
