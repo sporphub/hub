@@ -21370,7 +21370,7 @@ end))
 self._versionLabel = New("TextLabel", {
 Name = "Version",
 Size = UDim2.fromOffset(64, 30),
-Position = UDim2.new(1, -260, 0.5, 0),
+Position = UDim2.new(1, -196, 0.5, 0),
 AnchorPoint = Vector2.new(1, 0.5),
 BackgroundTransparency = 1,
 Font = self.Fonts.Medium,
@@ -21381,7 +21381,7 @@ Text = self._versionText or "",
 Visible = self._versionText ~= nil,
 Parent = self._header,
 })
-self:_bind(self._versionLabel, { TextColor3 = "TextTertiary" })
+self:_bind(self._versionLabel, { TextColor3 = "Success" })
 self._discordButton = New("TextButton", {
 Name = "Discord",
 Size = UDim2.fromOffset(76, 30),
