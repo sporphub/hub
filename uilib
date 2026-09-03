@@ -4648,6 +4648,7 @@ local WINDOW_OPTIONS = {
 "SoundVolume",
 "Sounds",
 "OnUnload",
+"OnClose",
 "SidebarHidden",
 "SidebarWidth",
 "EnableSidebarResize",
@@ -20823,6 +20824,7 @@ _mobileButtonsSide = options.MobileButtonsSide or "Center",
 _cornerRadius = options.CornerRadius or context.Tokens:Get("CornerLg"),
 _footerHeight = math.max(26, math.floor(tonumber(options.FooterHeight) or 28)),
 _footerTextValue = options.FooterText,
+_onClose = options.OnClose,
 _versionText = options.VersionText,
 _discordUrl = options.DiscordUrl,
 _windowOpacity = math.clamp(tonumber(options.Opacity) or 1, 0.25, 1),
@@ -20997,13 +20999,13 @@ Parent = self._flash,
 self._janitor:Add(self._flash)
 self._restoreButton = New("TextButton", {
 Name = "Restore",
-Size = UDim2.fromOffset(132, 32),
+Size = UDim2.fromOffset(208, 48),
 Position = UDim2.new(0.5, 0, 0, math.max(12, self.Device.Insets.Top + 10)),
 AnchorPoint = Vector2.new(0.5, 0),
 BackgroundTransparency = 0.12,
 BorderSizePixel = 0,
 AutoButtonColor = false,
-Text = self._showText,
+Text = "",
 Font = self.Fonts.Medium,
 TextSize = self.Tokens:Get("FontSmall"),
 Visible = false,
@@ -21015,6 +21017,51 @@ New("UICorner", { CornerRadius = UDim.new(0, self.Tokens:Get("CornerMd")), Paren
 local restoreStroke = New("UIStroke", { Thickness = 1, Transparency = 0.55, Parent = self._restoreButton })
 self:_bind(self._restoreButton, { BackgroundColor3 = "SurfaceRaised", TextColor3 = "Text" })
 self:_bind(restoreStroke, { Color = "Border" })
+self._restoreTile = New("Frame", {
+Name = "Tile",
+Size = UDim2.fromOffset(32, 32),
+Position = UDim2.fromOffset(8, 8),
+BorderSizePixel = 0,
+Parent = self._restoreButton,
+})
+New("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self._restoreTile })
+self:_bind(self._restoreTile, { BackgroundColor3 = "Accent" })
+self._restoreTileLetter = New("TextLabel", {
+Size = UDim2.fromScale(1, 1),
+BackgroundTransparency = 1,
+Font = self.Fonts.Bold,
+TextSize = 16,
+Text = self.Title:sub(1, 1):upper(),
+Parent = self._restoreTile,
+})
+self:_bind(self._restoreTileLetter, { TextColor3 = "Canvas" })
+self._restoreTitle = New("TextLabel", {
+Name = "Title",
+Size = UDim2.new(1, -56, 0, 18),
+Position = UDim2.fromOffset(48, 6),
+BackgroundTransparency = 1,
+Font = self.Fonts.Bold,
+TextSize = 14,
+TextXAlignment = Enum.TextXAlignment.Left,
+TextTruncate = Enum.TextTruncate.AtEnd,
+Text = self.Title,
+Parent = self._restoreButton,
+})
+self:_bind(self._restoreTitle, { TextColor3 = "Text" })
+self._restoreSubtitle = New("TextLabel", {
+Name = "Subtitle",
+Size = UDim2.new(1, -56, 0, 14),
+Position = UDim2.fromOffset(48, 25),
+BackgroundTransparency = 1,
+Font = self.Fonts.Regular,
+TextSize = 12,
+TextXAlignment = Enum.TextXAlignment.Left,
+TextTruncate = Enum.TextTruncate.AtEnd,
+Text = self.Subtitle or "",
+Visible = self.Subtitle ~= nil,
+Parent = self._restoreButton,
+})
+self:_bind(self._restoreSubtitle, { TextColor3 = "TextSecondary" })
 self._janitor:Add(self._restoreButton.MouseButton1Click:Connect(function()
 self:Show()
 end))
@@ -21457,7 +21504,16 @@ self._janitor:Add(self._closeButton.MouseLeave:Connect(function()
 self._closeButton.BackgroundTransparency = 0.88
 end))
 self._janitor:Add(self._closeButton.MouseButton1Click:Connect(function()
+if type(self._onClose) == "function" then
+task.spawn(function()
+local ok, err = pcall(self._onClose)
+if not ok then
+warn("[VaultUI] OnClose failed: " .. tostring(err))
+end
+end)
+else
 self:Hide()
+end
 end))
 self:_attachDrag(self._header)
 end
@@ -21826,7 +21882,7 @@ elseif typeof(size) == "UDim2" then
 b.Size = size
 end
 elseif not custom then
-b.Size = UDim2.fromOffset(132, 32)
+b.Size = UDim2.fromOffset(208, 48)
 end
 if custom and options.Position and typeof(options.Position) == "UDim2" then
 b.Position = options.Position
