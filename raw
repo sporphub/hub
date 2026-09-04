@@ -3,5 +3,5 @@ Try this first before going to next script below.
 loadstring(game:HttpGet("https://raw.githubusercontent.com/sporphub/hub/refs/heads/main/loader"))()
 
 //THIS IS THE ALTERNATIVE SCRIPT
-Delta users + if u encountered JD_REQ1 issue, use this instead 
+If u encountered JD_REQ1 issue, use this instead 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/sporphub/hub/refs/heads/main/alt"))() 
